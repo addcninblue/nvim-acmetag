@@ -20,4 +20,34 @@ local function run(letter)
     return api.nvim_command("startinsert")
   end
 end
-return {run = run}
+local letters = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"}
+local function display_registers()
+  local bufnr = open_split("topleft")
+  local function _2_()
+    local tbl_15_auto = {}
+    local i_16_auto = #tbl_15_auto
+    for _, letter in ipairs(letters) do
+      local val_17_auto
+      do
+        local reg = f.getreg(letter, 1)
+        if not string.find(reg, "\n") then
+          val_17_auto = (letter .. ": " .. reg)
+        else
+          val_17_auto = nil
+        end
+      end
+      if (nil ~= val_17_auto) then
+        i_16_auto = (i_16_auto + 1)
+        do end (tbl_15_auto)[i_16_auto] = val_17_auto
+      else
+      end
+    end
+    return tbl_15_auto
+  end
+  api.nvim_buf_set_lines(bufnr, 0, -1, true, _2_())
+  vim.bo.bufhidden = "hide"
+  vim.bo.buflisted = false
+  vim.bo.buftype = "nofile"
+  return nil
+end
+return {run = run, display_registers = display_registers}

@@ -21,4 +21,17 @@
         (f.termopen command)
         (api.nvim_command "startinsert")))))
 
-{:run run}
+(local letters [ "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z" ])
+
+(lambda display-registers []
+  (let [bufnr (open-split "topleft")]
+    (api.nvim_buf_set_lines bufnr 0 -1 true
+                            (icollect [_ letter (ipairs letters)]
+                                      (let [reg (f.getreg letter 1)]
+                                        (if (not (string.find reg "\n"))
+                                          (.. letter ": " reg)))))
+    (set vim.bo.bufhidden "hide")
+    (set vim.bo.buflisted false)
+    (set vim.bo.buftype "nofile")))
+
+{:run run :display_registers display-registers}
