@@ -50,4 +50,27 @@ local function display_registers()
   vim.bo.buftype = "nofile"
   return nil
 end
-return {run = run, display_registers = display_registers}
+local function get_line_at_cursor()
+  local function _5_(_241)
+    return (_241)[1]
+  end
+  local function _6_(_241)
+    return api.nvim_buf_get_lines(0, (_241 - 1), _241, true)
+  end
+  local function _7_(_241)
+    return (_241)[1]
+  end
+  return _5_(_6_(_7_(api.nvim_win_get_cursor(0))))
+end
+local function yank_line_to_register()
+  local line = get_line_at_cursor()
+  if (#line > 3) then
+    local letter = string.sub(line, 1, 1)
+    local contents = string.sub(line, 4)
+    f.setreg(letter, contents)
+    return print(("Yanked to register " .. letter))
+  else
+    return nil
+  end
+end
+return {run = run, display_registers = display_registers, yank_line_to_register = yank_line_to_register}

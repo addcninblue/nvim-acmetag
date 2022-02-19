@@ -34,4 +34,20 @@
     (set vim.bo.buflisted false)
     (set vim.bo.buftype "nofile")))
 
-{:run run :display_registers display-registers}
+(lambda get-line-at-cursor []
+  (->
+    (api.nvim_win_get_cursor 0)
+    (#(. $1 1))
+    (#(api.nvim_buf_get_lines 0 (- $1 1) $1 true))
+    (#(. $1 1))))
+
+(lambda yank-line-to-register []
+  (local line (get-line-at-cursor))
+
+  (if (> (length line) 3)
+    (let [letter (string.sub line 1 1)
+          contents (string.sub line 4)]
+      (f.setreg letter contents)
+      (print (.. "Yanked to register " letter)))))
+
+{:run run :display_registers display-registers :yank_line_to_register yank-line-to-register}
