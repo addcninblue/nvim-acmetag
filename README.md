@@ -17,7 +17,7 @@ For this usecase, we can use Nvim-Acmetag as follows:
 We can streamline this by `nnoremap`ping `-a` to that function above, letting
 execute `make test` with `-a`. Here is the config that I use:
 
-```lua
+```fnl
 ;;;; Vim-Acmetag
 (let [letters [ "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z" ]
       acmetag (require "acmetag")]
