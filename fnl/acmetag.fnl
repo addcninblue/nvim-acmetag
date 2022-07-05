@@ -10,6 +10,10 @@
 (var pids {})
 (var ns (api.nvim_create_namespace "acmetag"))
 
+(api.nvim_set_hl 0 "TagbarError" {:ctermfg 1 :fg "Red" :default true})
+(api.nvim_set_hl 0 "TagbarWarn" {:ctermfg 3 :fg "Orange" :default true})
+(api.nvim_set_hl 0 "TagbarOK" {:ctermfg 2 :fg "Green" :default true})
+
 (fn kill-pid [pid killcode?]
   (io.popen (.. "kill -" (or killcode? 9) " " pid))) ;; NOTE: use nicer way to terminate maybe?
 
@@ -122,10 +126,10 @@
                                                                        (remove-pid j.pid)
                                                                        (set-extmark bufnr status-extmark-id "■"
                                                                                     (if (or (~= 0 j.code) (~= 0 j.signal))
-                                                                                      "DiagnosticVirtualTextError"
-                                                                                      "DiagnosticVirtualTextHint")))))})]
+                                                                                      "TagbarError"
+                                                                                      "TagbarOK")))))})]
     ; TODO: set start and end times
-    (set-extmark bufnr status-extmark-id "■" "DiagnosticVirtualTextWarn")
+    (set-extmark bufnr status-extmark-id "■" "TagbarWarn")
     (: job "start")
     (add-pid status-extmark-id job.pid)))
 
