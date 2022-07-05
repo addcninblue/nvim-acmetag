@@ -10,7 +10,8 @@
 (var pids {})
 (var ns (api.nvim_create_namespace "acmetag"))
 
-(api.nvim_set_hl 0 "TagbarError" {:ctermfg 1 :fg "Red" :default true})
+(api.nvim_set_hl 0 "TagbarComment" {:ctermfg 11 :fg "Gray" :italic 1 :default true})
+(api.nvim_set_hl 0 "TagbarError" {:ctermfg 1 :fg "Red" :italic 1 :default true})
 (api.nvim_set_hl 0 "TagbarWarn" {:ctermfg 3 :fg "Orange" :default true})
 (api.nvim_set_hl 0 "TagbarOK" {:ctermfg 2 :fg "Green" :default true})
 
@@ -120,8 +121,8 @@
         bufnr (f.bufnr)
         job (Job:new {:command "/bin/sh"
                       :args ["-c" line]
-                      :on_stdout (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "Comment")))
-                      :on_stderr (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "Error")))
+                      :on_stdout (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "TagbarComment")))
+                      :on_stderr (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "TagbarError")))
                       :on_exit (vim.schedule_wrap (lambda [j retval] (do
                                                                        (remove-pid j.pid)
                                                                        (set-extmark bufnr status-extmark-id "■"
