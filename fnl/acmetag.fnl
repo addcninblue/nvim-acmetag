@@ -1,6 +1,7 @@
 (local f vim.fn)
 (local api vim.api)
 (local cmd vim.cmd)
+(local opt vim.opt)
 (local Job (require "plenary.job"))
 
 ; TODO: add support for `<|>`
@@ -32,20 +33,35 @@
 ;     (api.nvim_set_current_buf bufnr)
 ;     bufnr))
 
-(lambda open-vert-split [direction]
-  "Opens vertical split terminal at 33% width"
-  (let [bufheight (f.floor (/ (f.winwidth 0) 3))]
-    (vim.cmd (.. direction " " bufheight "vsplit"))
-    (local bufnr (api.nvim_create_buf false false))
-    (api.nvim_set_current_buf bufnr)
-    bufnr))
+(lambda open-centered-buf-in-float [bufnr width-proportion height-proportion]
+  (let [columns (opt.columns:get)
+        lines (- (opt.lines:get) 2)
+        width (vim.fn.round (* columns width-proportion))
+        height (vim.fn.round (* lines height-proportion))
+        row-offset (vim.fn.round (/ (- lines height) 2))
+        col-offset (vim.fn.round (/ (- columns width) 2))
+        win-id (api.nvim_open_win bufnr true {:relative "editor"
+                                              :row row-offset
+                                              :col col-offset
+                                              :width width
+                                              :height height
+                                              :border "single"})]
+    (api.nvim_win_set_option win-id "winhl" "Normal:")
+    (api.nvim_create_autocmd "BufLeave" {:callback (fn [{:buf buf :id id}]
+                                                     (if (= buf bufnr)
+                                                       (do
+                                                         (api.nvim_win_close win-id false)
+                                                         (api.nvim_del_autocmd id))))})))
 
-(lambda restore-vert-split [direction bufnr]
-  "Opens bottom split terminal at 33% height."
-  (print "Restored existing split.")
-  (let [bufheight (f.floor (/ (f.winwidth 0) 3))]
-    (vim.cmd (.. direction " " bufheight "vsplit"))
-    (api.nvim_set_current_buf bufnr)))
+(lambda open-acmetag []
+  "Opens acmetag in float."
+  (local bufnr (api.nvim_create_buf false false))
+  (open-centered-buf-in-float bufnr 0.8 0.8)
+  bufnr)
+
+(lambda restore-acmetag [bufnr]
+  "Restores acmetag in float."
+  (open-centered-buf-in-float bufnr 0.8 0.8))
 
 (lambda get-line-at-cursor []
   (->
@@ -142,12 +158,12 @@
 
 (lambda open-tags []
   (if (or (= tagbufnr nil) (not (f.bufexists tagbufnr)))
-    (do (->> (open-vert-split "belowright")
+    (do (->> (open-acmetag)
              (set tagbufnr))
       (cmd (.. "edit .tagbar"))
       (vim.keymap.set "n" "<CR>" execute-line {:buffer tagbufnr})
       (vim.keymap.set "n" "\\" (fn [] (stop-execution-at-line 15) {:buffer tagbufnr}))
       (vim.keymap.set "n" "<C-\\>" (fn [] (stop-execution-at-line 9) {:buffer tagbufnr})))
-    (restore-vert-split "belowright" tagbufnr)))
+    (restore-acmetag tagbufnr)))
 
 {:open-tags open-tags}
