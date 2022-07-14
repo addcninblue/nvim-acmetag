@@ -118,11 +118,12 @@
     (api.nvim_buf_set_extmark bufnr ns line-nr 0 {:id extmark-id
                                                   :virt_lines lines})))
 
-(lambda append-lines-to-extmark [bufnr extmark-id newline hl]
+(fn append-lines-to-extmark [bufnr extmark-id newline hl]
   "Appends line to extmark"
-  (let [lines (get-lines-at-extmark bufnr extmark-id)]
-    (table.insert lines [[newline hl]])
-    (set-lines-at-extmark bufnr extmark-id lines)))
+  (if newline
+    (let [lines (get-lines-at-extmark bufnr extmark-id)]
+      (table.insert lines [[newline hl]])
+      (set-lines-at-extmark bufnr extmark-id lines))))
 
 (lambda set-extmark [bufnr extmark-id text hl]
   (let [line-nr (get-row-at-extmark bufnr extmark-id)]

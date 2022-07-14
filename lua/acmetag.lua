@@ -133,19 +133,19 @@ local function set_lines_at_extmark(bufnr, extmark_id, lines)
   return api.nvim_buf_set_extmark(bufnr, ns, line_nr, 0, {id = extmark_id, virt_lines = lines})
 end
 local function append_lines_to_extmark(bufnr, extmark_id, newline, hl)
-  _G.assert((nil ~= hl), "Missing argument hl on fnl/acmetag.fnl:121")
-  _G.assert((nil ~= newline), "Missing argument newline on fnl/acmetag.fnl:121")
-  _G.assert((nil ~= extmark_id), "Missing argument extmark-id on fnl/acmetag.fnl:121")
-  _G.assert((nil ~= bufnr), "Missing argument bufnr on fnl/acmetag.fnl:121")
-  local lines = get_lines_at_extmark(bufnr, extmark_id)
-  table.insert(lines, {{newline, hl}})
-  return set_lines_at_extmark(bufnr, extmark_id, lines)
+  if newline then
+    local lines = get_lines_at_extmark(bufnr, extmark_id)
+    table.insert(lines, {{newline, hl}})
+    return set_lines_at_extmark(bufnr, extmark_id, lines)
+  else
+    return nil
+  end
 end
 local function set_extmark(bufnr, extmark_id, text, hl)
-  _G.assert((nil ~= hl), "Missing argument hl on fnl/acmetag.fnl:127")
-  _G.assert((nil ~= text), "Missing argument text on fnl/acmetag.fnl:127")
-  _G.assert((nil ~= extmark_id), "Missing argument extmark-id on fnl/acmetag.fnl:127")
-  _G.assert((nil ~= bufnr), "Missing argument bufnr on fnl/acmetag.fnl:127")
+  _G.assert((nil ~= hl), "Missing argument hl on fnl/acmetag.fnl:128")
+  _G.assert((nil ~= text), "Missing argument text on fnl/acmetag.fnl:128")
+  _G.assert((nil ~= extmark_id), "Missing argument extmark-id on fnl/acmetag.fnl:128")
+  _G.assert((nil ~= bufnr), "Missing argument bufnr on fnl/acmetag.fnl:128")
   local line_nr = get_row_at_extmark(bufnr, extmark_id)
   return api.nvim_buf_set_extmark(bufnr, ns, line_nr, 0, {id = extmark_id, virt_text = {{text, hl}}})
 end
@@ -156,37 +156,37 @@ local function execute_line()
   local status_extmark_id = create_extmark_at_line()
   local bufnr = f.bufnr()
   local job
-  local function _12_(_, data)
+  local function _13_(_, data)
     return append_lines_to_extmark(bufnr, output_extmark_id, data, "TagbarComment")
   end
-  local function _13_(_, data)
+  local function _14_(_, data)
     return append_lines_to_extmark(bufnr, output_extmark_id, data, "TagbarError")
   end
-  local function _14_(j, retval)
-    _G.assert((nil ~= retval), "Missing argument retval on fnl/acmetag.fnl:142")
-    _G.assert((nil ~= j), "Missing argument j on fnl/acmetag.fnl:142")
+  local function _15_(j, retval)
+    _G.assert((nil ~= retval), "Missing argument retval on fnl/acmetag.fnl:143")
+    _G.assert((nil ~= j), "Missing argument j on fnl/acmetag.fnl:143")
     remove_pid(j.pid)
-    local function _15_()
+    local function _16_()
       if ((0 ~= j.code) or (0 ~= j.signal)) then
         return "TagbarError"
       else
         return "TagbarOK"
       end
     end
-    return set_extmark(bufnr, status_extmark_id, "\226\150\160", _15_())
+    return set_extmark(bufnr, status_extmark_id, "\226\150\160", _16_())
   end
-  job = Job:new({command = "/bin/sh", args = {"-c", line}, on_stdout = vim.schedule_wrap(_12_), on_stderr = vim.schedule_wrap(_13_), on_exit = vim.schedule_wrap(_14_)})
+  job = Job:new({command = "/bin/sh", args = {"-c", line}, on_stdout = vim.schedule_wrap(_13_), on_stderr = vim.schedule_wrap(_14_), on_exit = vim.schedule_wrap(_15_)})
   set_extmark(bufnr, status_extmark_id, "\226\150\160", "TagbarWarn")
   job:start()
   return add_pid(status_extmark_id, job.pid)
 end
 local function stop_execution_at_line(signal)
-  _G.assert((nil ~= signal), "Missing argument signal on fnl/acmetag.fnl:153")
-  for _, _16_ in ipairs(get_extmarks_at_line()) do
-    local _each_17_ = _16_
-    local extmark_id = _each_17_[1]
-    local _0 = _each_17_[2]
-    local _1 = _each_17_[3]
+  _G.assert((nil ~= signal), "Missing argument signal on fnl/acmetag.fnl:154")
+  for _, _17_ in ipairs(get_extmarks_at_line()) do
+    local _each_18_ = _17_
+    local extmark_id = _each_18_[1]
+    local _0 = _each_18_[2]
+    local _1 = _each_18_[3]
     local pid = get_pid_by_status_extmark(extmark_id)
     if (nil ~= pid) then
       kill_pid(pid, signal)
@@ -200,16 +200,16 @@ local function open_tags()
     tagbufnr = open_acmetag()
     cmd("edit .tagbar")
     vim.keymap.set("n", "<CR>", execute_line, {buffer = tagbufnr})
-    local function _19_()
+    local function _20_()
       stop_execution_at_line(15)
       return {buffer = tagbufnr}
     end
-    vim.keymap.set("n", "\\", _19_)
-    local function _20_()
+    vim.keymap.set("n", "\\", _20_)
+    local function _21_()
       stop_execution_at_line(9)
       return {buffer = tagbufnr}
     end
-    return vim.keymap.set("n", "<C-\\>", _20_)
+    return vim.keymap.set("n", "<C-\\>", _21_)
   else
     return restore_acmetag(tagbufnr)
   end
