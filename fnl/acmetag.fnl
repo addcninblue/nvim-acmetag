@@ -89,7 +89,7 @@
 
 (lambda get-extmarks-at-line []
   (let [line-nr (. (api.nvim_win_get_cursor 0) 1)]
-    (api.nvim_buf_get_extmarks 0 ns [(- line-nr 1) 0] [(- line-nr 1) 0] [])))
+    (api.nvim_buf_get_extmarks 0 ns [(- line-nr 1) 0] [(- line-nr 1) -1] [])))
 
 (lambda clear-extmarks-at-line []
   (let [extmarks (get-extmarks-at-line)]
