@@ -4,10 +4,13 @@
 (local opt vim.opt)
 (local Job (require "plenary.job"))
 
-; TODO: add support for `<|>`
 ; TODO: think about support for opening .tagbar in multiple editor instances?
 
 (var tagbufnr nil)
+(var input nil)
+(var visual-marks nil)
+(var selection-type nil)
+(var last-buffer nil)
 (var pids {})
 (var ns (api.nvim_create_namespace "acmetag"))
 
@@ -130,26 +133,76 @@
     (api.nvim_buf_set_extmark bufnr ns line-nr 0 {:id extmark-id
                                                   :virt_text [[text hl]]})))
 
-(lambda execute-line []
+(lambda process-command [command]
+  (if (< (string.len command) 1)
+    nil
+    (let [first-char (string.sub command 1 1)
+          remainder (string.sub command 2 -1)]
+      (if (= first-char ">") {:input true :command remainder :output false}
+          (= first-char "<") {:input false :command remainder :output true}
+          (= first-char "|") {:input true :command remainder :output true}
+          {:input false :command command :output false}))))
+
+(fn calculate-positions
+  [[[_ start-row start-col _start-off] [_ end-row end-col _end-off]]
+   selection-type]
+  (let [[ current-last-line ] (api.nvim_buf_get_lines last-buffer (- end-row 1) end-row true)
+        last-line-length (string.len current-last-line)]
+    (if selection-type
+      (if (> end-col last-line-length) ;; Selection (visual-mode or motion)
+        [(- start-row 1) (- start-col 1) (- end-row 1) last-line-length] ; Clamp
+        [(- start-row 1) (- start-col 1) (- end-row 1) end-col])
+      (if (= 0 last-line-length) ;; No selection
+            [(- start-row 1) start-col (- end-row 1) end-col]
+            [(- start-row 1) (+ start-col 1) (- end-row 1) (+ end-col 1)]))))
+
+(lambda create-job [{:input input? :command command :output output?} bufnr output-extmark-id status-extmark-id]
+  (let [tempfile (vim.fn.tempname)
+        inputfile (.. tempfile "+input")
+        outputfile (.. tempfile "+output")
+        line
+        (.. (if input? (.. "cat " inputfile " | ") "")
+            command
+            (if output? (.. "> " outputfile) ""))
+        [start-row start-col end-row end-col] (calculate-positions visual-marks selection-type)]
+    {:inputfile inputfile
+     :outputfile outputfile
+     :job (Job:new {:command "/bin/sh"
+                    :args ["-c" line]
+                    :on_stdout (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "TagbarComment")))
+                    :on_stderr (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "TagbarError")))
+                    :on_exit (vim.schedule_wrap (lambda [j retval]
+                                                  (do
+                                                    (remove-pid j.pid)
+                                                    (if output?
+                                                      (api.nvim_buf_set_text last-buffer start-row start-col end-row end-col (f.readfile outputfile)))
+                                                    (set-extmark bufnr status-extmark-id "■"
+                                                                 (if (or (~= 0 j.code) (~= 0 j.signal))
+                                                                   "TagbarError"
+                                                                   "TagbarOK")))))})}))
+
+(fn execute-line []
   (clear-extmarks-at-line)
-  (let [line (get-line-at-cursor)
-        output-extmark-id (create-extmark-at-line)
+  (let [output-extmark-id (create-extmark-at-line)
         status-extmark-id (create-extmark-at-line)
         bufnr (f.bufnr)
-        job (Job:new {:command "/bin/sh"
-                      :args ["-c" line]
-                      :on_stdout (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "TagbarComment")))
-                      :on_stderr (vim.schedule_wrap (fn [_ data] (append-lines-to-extmark bufnr output-extmark-id data "TagbarError")))
-                      :on_exit (vim.schedule_wrap (lambda [j retval] (do
-                                                                       (remove-pid j.pid)
-                                                                       (set-extmark bufnr status-extmark-id "■"
-                                                                                    (if (or (~= 0 j.code) (~= 0 j.signal))
-                                                                                      "TagbarError"
-                                                                                      "TagbarOK")))))})]
+        processed (-?> (get-line-at-cursor)
+                       (process-command))
+        {:input needs_input
+         :output needs_output} processed
+        {:inputfile inputfile
+         :outputfile outputfile
+         :job job} (create-job processed bufnr output-extmark-id status-extmark-id)]
     ; TODO: set start and end times
-    (set-extmark bufnr status-extmark-id "■" "TagbarWarn")
-    (: job "start")
-    (add-pid status-extmark-id job.pid)))
+    (if (~= nil job)
+      (do
+        (if needs_input
+          (if input
+            (vim.fn.writefile input inputfile)
+            (print "Error: Needed input but did not send."))) ;; TODO: Figure out how to throw exception
+        (set-extmark bufnr status-extmark-id "■" "TagbarWarn")
+        (: job "start")
+        (add-pid status-extmark-id job.pid)))))
 
 (lambda stop-execution-at-line [signal]
   (each [_ [extmark-id _ _] (ipairs (get-extmarks-at-line))]
@@ -157,7 +210,11 @@
       (if (~= nil pid)
         (kill-pid pid signal)))))
 
-(lambda open-tags []
+(fn save-vars-and-open-tags [new-input new-visual-marks new-selection-type]
+  (set input new-input)
+  (set visual-marks new-visual-marks)
+  (set selection-type new-selection-type)
+  (set last-buffer (vim.api.nvim_get_current_buf))
   (if (or (= tagbufnr nil) (not (f.bufexists tagbufnr)))
     (do (->> (open-acmetag)
              (set tagbufnr))
@@ -167,4 +224,39 @@
       (vim.keymap.set "n" "<C-\\>" #(stop-execution-at-line 9) {:buffer tagbufnr}))
     (restore-acmetag tagbufnr)))
 
-{:open-tags open-tags}
+(lambda open-tags []
+  (let [[row col] (api.nvim_win_get_cursor 0)
+        col col
+        start [0 row col 0]
+        end [0 row col 0]]
+    (save-vars-and-open-tags nil [start end] nil)))
+
+(fn pipe-to-tags [selection-type]
+  (if (= selection-type nil)
+    (do
+      (set vim.o.opfunc "v:lua.require'acmetag'.pipe_to_tags")
+      "g@")
+    (let [sel-save vim.o.selection
+          reg-save (f.getreginfo "\"")
+          cb-save vim.o.clipboard
+          visual-marks-save [(f.getpos "'<") (f.getpos "'>")]
+          commands {"line" "'[V']y"
+                    "char" "`[v`]y"
+                    "block" (api.nvim_replace_termcodes "`[<c-v>`]y" true true true)}]
+      (set vim.o.clipboard "")
+      (set vim.o.selection "inclusive")
+      (vim.cmd (.. "noautocmd keepjumps normal! " (. commands selection-type)))
+
+      (let [input (f.getreg "\"" " " true)
+            visual-marks [(f.getpos "'<") (f.getpos "'>")]]
+        (save-vars-and-open-tags input visual-marks selection-type))
+
+      ; Restore original variables
+      (f.setreg "\"" reg-save)
+      (f.setpos "'<" (. visual-marks-save 1))
+      (f.setpos "'>" (. visual-marks-save 2))
+      (set vim.o.clipboard cb-save)
+      (set vim.o.selection sel-save))))
+
+{:open_tags open-tags
+ :pipe_to_tags pipe-to-tags}
