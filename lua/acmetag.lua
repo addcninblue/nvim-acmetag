@@ -199,17 +199,18 @@ local function open_tags()
   if ((tagbufnr == nil) or not f.bufexists(tagbufnr)) then
     tagbufnr = open_acmetag()
     cmd("edit .tagbar")
-    vim.keymap.set("n", "<CR>", execute_line, {buffer = tagbufnr})
     local function _20_()
-      stop_execution_at_line(15)
-      return {buffer = tagbufnr}
+      return execute_line()
     end
-    vim.keymap.set("n", "\\", _20_)
+    vim.keymap.set("n", "<CR>", _20_, {buffer = tagbufnr})
     local function _21_()
-      stop_execution_at_line(9)
-      return {buffer = tagbufnr}
+      return stop_execution_at_line(15)
     end
-    return vim.keymap.set("n", "<C-\\>", _21_)
+    vim.keymap.set("n", "\\", _21_, {buffer = tagbufnr})
+    local function _22_()
+      return stop_execution_at_line(9)
+    end
+    return vim.keymap.set("n", "<C-\\>", _22_, {buffer = tagbufnr})
   else
     return restore_acmetag(tagbufnr)
   end

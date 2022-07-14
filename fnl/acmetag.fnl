@@ -162,9 +162,9 @@
     (do (->> (open-acmetag)
              (set tagbufnr))
       (cmd (.. "edit .tagbar"))
-      (vim.keymap.set "n" "<CR>" execute-line {:buffer tagbufnr})
-      (vim.keymap.set "n" "\\" (fn [] (stop-execution-at-line 15) {:buffer tagbufnr}))
-      (vim.keymap.set "n" "<C-\\>" (fn [] (stop-execution-at-line 9) {:buffer tagbufnr})))
+      (vim.keymap.set "n" "<CR>" #(execute-line) {:buffer tagbufnr})
+      (vim.keymap.set "n" "\\" #(stop-execution-at-line 15) {:buffer tagbufnr})
+      (vim.keymap.set "n" "<C-\\>" #(stop-execution-at-line 9) {:buffer tagbufnr}))
     (restore-acmetag tagbufnr)))
 
 {:open-tags open-tags}
