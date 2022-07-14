@@ -17,7 +17,7 @@
 (api.nvim_set_hl 0 "TagbarOK" {:ctermfg 2 :fg "Green" :default true})
 
 (fn kill-pid [pid killcode?]
-  (io.popen (.. "kill -" (or killcode? 9) " " pid))) ;; NOTE: use nicer way to terminate maybe?
+  (io.popen (.. "kill -" (or killcode? 9) " " pid)))
 
 (lambda kill-all-running-processes []
   (each [_ pid (pairs pids)]
