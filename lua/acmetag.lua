@@ -163,11 +163,11 @@ local function process_command(command)
     if (first_char == ">") then
       return {input = true, command = remainder, output = false}
     elseif (first_char == "<") then
-      return {input = false, command = remainder, output = true}
+      return {command = remainder, output = true, input = false}
     elseif (first_char == "|") then
       return {input = true, command = remainder, output = true}
     else
-      return {input = false, command = command, output = false}
+      return {command = command, output = false, input = false}
     end
   end
 end
@@ -208,8 +208,8 @@ local function create_job(_23_, bufnr, output_extmark_id, status_extmark_id)
   _G.assert((nil ~= status_extmark_id), "Missing argument status-extmark-id on fnl/acmetag.fnl:159")
   _G.assert((nil ~= output_extmark_id), "Missing argument output-extmark-id on fnl/acmetag.fnl:159")
   _G.assert((nil ~= bufnr), "Missing argument bufnr on fnl/acmetag.fnl:159")
-  _G.assert((nil ~= input_3f), "Missing argument input? on fnl/acmetag.fnl:159")
   _G.assert((nil ~= command), "Missing argument command on fnl/acmetag.fnl:159")
+  _G.assert((nil ~= input_3f), "Missing argument input? on fnl/acmetag.fnl:159")
   _G.assert((nil ~= output_3f), "Missing argument output? on fnl/acmetag.fnl:159")
   local tempfile = vim.fn.tempname()
   local inputfile = (tempfile .. "+input")
@@ -317,29 +317,35 @@ local function save_vars_and_open_tags(new_input, new_visual_marks, new_selectio
   visual_marks = new_visual_marks
   selection_type = new_selection_type
   last_buffer = vim.api.nvim_get_current_buf()
-  if ((tagbufnr == nil) or not f.bufexists(tagbufnr)) then
-    tagbufnr = open_acmetag()
-    cmd("edit .tagbar")
-    local function _43_()
-      return execute_line()
+  vim.pretty_print(last_buffer)
+  vim.pretty_print(tagbufnr)
+  if (last_buffer ~= tagbufnr) then
+    if ((tagbufnr == nil) or not f.bufexists(tagbufnr)) then
+      tagbufnr = open_acmetag()
+      cmd("edit .tagbar")
+      local function _43_()
+        return execute_line()
+      end
+      vim.keymap.set("n", "<CR>", _43_, {buffer = tagbufnr})
+      local function _44_()
+        return stop_execution_at_line(15)
+      end
+      vim.keymap.set("n", "\\", _44_, {buffer = tagbufnr})
+      local function _45_()
+        return stop_execution_at_line(9)
+      end
+      return vim.keymap.set("n", "<C-\\>", _45_, {buffer = tagbufnr})
+    else
+      return restore_acmetag(tagbufnr)
     end
-    vim.keymap.set("n", "<CR>", _43_, {buffer = tagbufnr})
-    local function _44_()
-      return stop_execution_at_line(15)
-    end
-    vim.keymap.set("n", "\\", _44_, {buffer = tagbufnr})
-    local function _45_()
-      return stop_execution_at_line(9)
-    end
-    return vim.keymap.set("n", "<C-\\>", _45_, {buffer = tagbufnr})
   else
-    return restore_acmetag(tagbufnr)
+    return nil
   end
 end
 local function open_tags()
-  local _let_47_ = api.nvim_win_get_cursor(0)
-  local row = _let_47_[1]
-  local col = _let_47_[2]
+  local _let_48_ = api.nvim_win_get_cursor(0)
+  local row = _let_48_[1]
+  local col = _let_48_[2]
   local col0 = col
   local start = {0, row, col0, 0}
   local _end = {0, row, col0, 0}
